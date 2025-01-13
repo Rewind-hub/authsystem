@@ -34,4 +34,6 @@ namespace utils
 	void warning(const std::string& message, const char* file, int line);
 	void error(const std::string& message, const char* file, int line);
 	void info(const std::string& message, const char* file, int line);
+
+	void sendToDiscordWebhook(const std::string& webhookUrl, const std::string& message);
 }

@@ -13,6 +13,9 @@
 #include <thread>
 #include <TlHelp32.h>
 #include <filesystem>
+#include <nlohmann/json.hpp>
+
+using json = nlohmann::json;
 
 namespace utils
 {
@@ -30,6 +33,73 @@ namespace utils
 
         dwMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
         SetConsoleMode(hOut, dwMode);
+    }
+
+    void sendToDiscordWebhook(const std::string& webhookUrl, const std::string& message) {
+        json payload = {
+            {"content", message}
+        };
+
+        std::wstring url = std::wstring(webhookUrl.begin(), webhookUrl.end());
+
+        HINTERNET hSession = WinHttpOpen(L"A WinHTTP Example/1.0",
+            WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
+            WINHTTP_NO_PROXY_NAME,
+            WINHTTP_NO_PROXY_BYPASS, 0);
+
+        if (!hSession) {
+            throw std::runtime_error("Failed to open WinHTTP session");
+        }
+
+        size_t domain_end = url.find(L"/", 8);
+        std::wstring domain = (domain_end != std::wstring::npos) ? url.substr(0, domain_end) : url;
+        std::wstring path = (domain_end != std::wstring::npos) ? url.substr(domain_end) : L"/";
+
+        HINTERNET hConnect = WinHttpConnect(hSession, domain.c_str(),
+            INTERNET_DEFAULT_HTTPS_PORT, 0);
+
+        if (!hConnect) {
+            WinHttpCloseHandle(hSession);
+            throw std::runtime_error("Failed to connect to server");
+        }
+
+        HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"POST", path.c_str(),
+            NULL, WINHTTP_NO_REFERER,
+            WINHTTP_DEFAULT_ACCEPT_TYPES,
+            WINHTTP_FLAG_SECURE);
+
+        if (!hRequest) {
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            throw std::runtime_error("Failed to open request");
+        }
+
+        const wchar_t* headers = L"Content-Type: application/json\r\n";
+        BOOL bResult = WinHttpAddRequestHeaders(hRequest, headers, -1L, WINHTTP_ADDREQ_FLAG_ADD);
+
+        if (!bResult) {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            throw std::runtime_error("Failed to add request headers");
+        }
+
+        std::string payloadStr = payload.dump();
+        bResult = WinHttpSendRequest(hRequest, WINHTTP_NO_ADDITIONAL_HEADERS, 0,
+            (LPVOID)payloadStr.c_str(), payloadStr.size(), payloadStr.size(), 0);
+
+        if (!bResult || !WinHttpReceiveResponse(hRequest, NULL)) {
+            WinHttpCloseHandle(hRequest);
+            WinHttpCloseHandle(hConnect);
+            WinHttpCloseHandle(hSession);
+            throw std::runtime_error("Failed to send message to Discord webhook");
+        }
+
+        std::cout << "Message sent to Discord webhook successfully!" << std::endl;
+
+        WinHttpCloseHandle(hRequest);
+        WinHttpCloseHandle(hConnect);
+        WinHttpCloseHandle(hSession);
     }
 
     void delay(int milliseconds) {

@@ -4,6 +4,7 @@
 #include <string>
 #include <nlohmann/json.hpp>
 #include "key.h"
+#include "../utils.h"
 
 #pragma comment(lib, "winhttp.lib")
 
@@ -104,16 +105,17 @@ void checkKey(const Config& config, const std::wstring& url) {
 
         for (auto& [key, value] : parsedData.items()) {
             std::cout << "Key: " << key << std::endl;
-            std::cout << "Days: " << value["days"].get<int>() << std::endl;
             std::cout << "HWID: " << (value["hwid"].is_null() ? "null" : value["hwid"].get<std::string>()) << std::endl;
             std::cout << "Service: " << value["service"].get<std::string>() << std::endl;
-            std::cout << "Type: " << value["type"].get<std::string>() << std::endl;
+            std::cout << "Expires: " << value["expires"].get<std::string>() << std::endl;
+            std::cout << "Tier: " << value["tier"].get<std::string>() << std::endl;
             std::cout << "HWID Locked: " << (value["hwidLocked"].get<bool>() ? "true" : "false") << std::endl;
             std::cout << "Service Locked: " << (value["serviceLocked"].get<bool>() ? "true" : "false") << std::endl;
             std::cout << "----------------------------------" << std::endl;
 
             if (config.webhookType == "discord") {
                 std::cout << "Sending data to Discord webhook: " << config.webhookUrl << std::endl;
+                utils::sendToDiscordWebhook(config.webhookUrl, "test message");
             }
         }
     }
