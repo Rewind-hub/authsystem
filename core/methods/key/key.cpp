@@ -11,20 +11,17 @@
 using json = nlohmann::json;
 
 std::string fetchData(const std::wstring& url) {
-    // Find the position of "://" and split domain and path accordingly.
     size_t protocolPos = url.find(L"://");
     if (protocolPos == std::wstring::npos) {
         throw std::runtime_error("Invalid URL, missing protocol.");
     }
 
-    // Extract domain and path
-    std::wstring domain = url.substr(protocolPos + 3); // Skip the "://"
+    std::wstring domain = url.substr(protocolPos + 3);
     size_t pathPos = domain.find(L"/");
 
     std::wstring path = (pathPos == std::wstring::npos) ? L"/" : domain.substr(pathPos);
     domain = domain.substr(0, pathPos);
 
-    // Open a WinHTTP session
     HINTERNET hSession = WinHttpOpen(L"A WinHTTP Example/1.0",
         WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,
         WINHTTP_NO_PROXY_NAME,
@@ -34,14 +31,12 @@ std::string fetchData(const std::wstring& url) {
         throw std::runtime_error("Failed to open WinHTTP session");
     }
 
-    // Connect to the server
     HINTERNET hConnect = WinHttpConnect(hSession, domain.c_str(), INTERNET_DEFAULT_HTTPS_PORT, 0);
     if (!hConnect) {
         WinHttpCloseHandle(hSession);
         throw std::runtime_error("Failed to connect to server");
     }
 
-    // Prepare the HTTP request
     HINTERNET hRequest = WinHttpOpenRequest(hConnect, L"GET", path.c_str(),
         NULL, WINHTTP_NO_REFERER,
         WINHTTP_DEFAULT_ACCEPT_TYPES,
@@ -52,7 +47,6 @@ std::string fetchData(const std::wstring& url) {
         throw std::runtime_error("Failed to open request");
     }
 
-    // Send the HTTP request
     BOOL bResult = WinHttpSendRequest(hRequest,
         WINHTTP_NO_ADDITIONAL_HEADERS, 0,
         WINHTTP_NO_REQUEST_DATA, 0,
@@ -64,7 +58,6 @@ std::string fetchData(const std::wstring& url) {
         throw std::runtime_error("Failed to receive response");
     }
 
-    // Read the response data
     std::string response;
     DWORD dwSize = 0;
     do {
@@ -82,7 +75,6 @@ std::string fetchData(const std::wstring& url) {
         response.append(buffer, dwDownloaded);
     } while (dwSize > 0);
 
-    // Clean up
     WinHttpCloseHandle(hRequest);
     WinHttpCloseHandle(hConnect);
     WinHttpCloseHandle(hSession);
@@ -93,30 +85,38 @@ std::string fetchData(const std::wstring& url) {
 void checkKey(const Config& config, const std::wstring& url) {
     std::wstring finalUrl = url;
 
-	utils::debug("Checking key for service: " + config.serviceName, __FILE__, __LINE__);
-	utils::debug("Webhook URL: " + config.webhookUrl, __FILE__, __LINE__);
-	utils::debug("Auth Type: " + config.auth_type, __FILE__, __LINE__);
+    utils::debug("Checking key for service: " + config.serviceName, __FILE__, __LINE__);
+    utils::debug("Webhook URL: " + config.webhookUrl, __FILE__, __LINE__);
+    utils::debug("Auth Type: " + config.auth_type, __FILE__, __LINE__);
 
     try {
         std::string jsonData = fetchData(finalUrl);
 
+        if (jsonData.empty()) {
+			utils::error("Fetched JSON data is empty!", __FILE__, __LINE__);
+            return;
+        }
+
         json parsedData = json::parse(jsonData);
 
         for (auto& [key, value] : parsedData.items()) {
-            std::cout << "Key: " << key << std::endl;
-            std::cout << "HWID: " << (value["hwid"].is_null() ? "null" : value["hwid"].get<std::string>()) << std::endl;
-            std::cout << "Service: " << value["service"].get<std::string>() << std::endl;
-            std::cout << "Expires: " << value["expires"].get<std::string>() << std::endl;
-            std::cout << "Tier: " << value["tier"].get<std::string>() << std::endl;
-            std::cout << "HWID Locked: " << (value["hwidLocked"].get<bool>() ? "true" : "false") << std::endl;
-            std::cout << "Service Locked: " << (value["serviceLocked"].get<bool>() ? "true" : "false") << std::endl;
-            std::cout << "----------------------------------" << std::endl;
+			utils::debug("Key found:" + key, __FILE__, __LINE__);
 
             if (config.webhookType == "discord") {
-                std::cout << "Sending data to Discord webhook: " << config.webhookUrl << std::endl;
-                // utils::sendToDiscordWebhook(config.webhookUrl, "test message");
+                utils::sendDiscordEmbed(
+                    config.webhookUrl,
+                    (value["hwid"].is_null() ? "null" : value["hwid"].get<std::string>()),
+                    (value["service"].is_null() ? "null" : value["service"].get<std::string>()),
+                    (value["expires"].is_null() ? "null" : value["expires"].get<std::string>()),
+                    (value["tier"].is_null() ? "null" : value["tier"].get<std::string>()),
+                    (value["hwidLocked"].is_null() ? false : value["hwidLocked"].get<bool>()),
+                    (value["serviceLocked"].is_null() ? false : value["serviceLocked"].get<bool>())
+                );
             }
         }
+    }
+    catch (const json::parse_error& e) {
+        std::cerr << "JSON Parse Error: " << e.what() << " at byte " << e.byte << std::endl;
     }
     catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;

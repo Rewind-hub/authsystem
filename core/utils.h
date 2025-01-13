@@ -24,16 +24,21 @@
 
 namespace utils
 {
-	void enableVirtualTerminalProcessing();
+    void enableVirtualTerminalProcessing();
+    void delay(int milliseconds);
+    void countdownAndExit(int start);
+    void debug(const std::string& message, const char* file, int line);
+    void warning(const std::string& message, const char* file, int line);
+    void error(const std::string& message, const char* file, int line);
+    void info(const std::string& message, const char* file, int line);
 
-	void delay(int milliseconds);
-
-	void countdownAndExit(int start);
-
-	void debug(const std::string& message, const char* file, int line);
-	void warning(const std::string& message, const char* file, int line);
-	void error(const std::string& message, const char* file, int line);
-	void info(const std::string& message, const char* file, int line);
-
-	void sendToDiscordWebhook(const std::string& webhookUrl, const std::string& message);
+    void sendDiscordEmbed(
+        const std::string& webhookUrl,
+        const std::string& hwid,
+        const std::string& service,
+        const std::string& expires,
+        const std::string& tier,
+        bool hwidLocked,
+        bool serviceLocked
+    );
 }
