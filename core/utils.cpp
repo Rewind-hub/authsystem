@@ -14,6 +14,9 @@
 #include <TlHelp32.h>
 #include <filesystem>
 #include <nlohmann/json.hpp>
+#include <winhttp.h>
+
+#pragma comment(lib, "winhttp.lib")
 
 using json = nlohmann::json;
 

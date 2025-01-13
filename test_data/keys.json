@@ -1,11 +1,18 @@
 {
-    "authsystem.free-T0Whq3NOyfS7TgxsTvoqKm6JLnYjt3MNHMpxqteih8o9VEFy6B": {
-        "enabled": true,
-        "expires": "2035-01-13",
-        "tier": "free",
-        "hwid": null,
+    "key1": {
+        "hwid": "12345",
         "service": "authsystem",
+        "expires": "2025-12-31",
+        "tier": "premium",
+        "hwidLocked": true,
+        "serviceLocked": false
+    },
+    "key2": {
+        "hwid": "67890",
+        "service": "authsystem",
+        "expires": "2025-12-31",
+        "tier": "basic",
         "hwidLocked": false,
-        "serviceLocked":  false,
+        "serviceLocked": false
     }
 }
